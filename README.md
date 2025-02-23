@@ -1,6 +1,9 @@
 # Building a Smart Voice Assistant for Professionals
 
-## 📌 Project Overview
+## 📌 Google Drive Link for demo video
+🔗 Click here: [Project Drive Folder](https://drive.google.com/drive/folders/1g-BzCBUqMQpLDbwrLNxLa7d90G9VNCfi)  
+
+## 📌 Project Overview  
 Professionals often struggle to capture action items and important points during meetings while staying actively engaged in conversations. This project aims to solve that problem by developing a mobile application that listens to conversations and automatically extracts actionable information.
 
 ## 🎯 Challenge Statement
@@ -43,10 +46,10 @@ The first challenge was selecting a suitable platform. After exploring various o
 ## 🖼️ Sample Screenshots
 Below are some sample images demonstrating the application's functionality:
 
-| ![Image 1](https://github.com/user-attachments/assets/e081d25c-3979-48aa-aca7-16dd99788fdc) | ![Image 2](https://github.com/user-attachments/assets/a5dfb4d1-5441-4373-995c-d586c2542add) |
+| ![Image 1](https://github.com/user-attachments/assets/5bf50827-0cef-4dcc-ab88-dd92bf884afa) | ![Image 2](https://github.com/user-attachments/assets/9c23f4c6-cfa9-48fc-b457-7c269c854da4) |
 |-------------------------|-------------------------|
-| ![Image 3](https://github.com/user-attachments/assets/24c68734-a3e0-42b1-aa68-d0cadbfbb075) | ![Image 4](https://github.com/user-attachments/assets/b0c11d26-a90e-4f4f-9e8c-b5ecd0078dfc) |
-| ![Image 5](https://github.com/user-attachments/assets/f2f64dde-b2f8-4e27-b83e-00bfe6325f06) | ![Image 6](https://github.com/user-attachments/assets/69c3c93f-6850-4e5b-aa2e-72a0181efc06) |
+| ![Image 3](https://github.com/user-attachments/assets/0235c882-5e4b-4e02-a5e9-c841dc19d694) | ![Image 4](https://github.com/user-attachments/assets/db8dc371-d60a-4985-be75-8edcd5d78d5a) |
+| ![Image 5](https://github.com/user-attachments/assets/e8349ab7-d6af-4ec2-a139-83b6d2737e1c) | ![Image 6](https://github.com/user-attachments/assets/2a321bf9-7679-4ea0-b831-ef333cc61bda) |
 
 ## 🛠️ Tech Stack
 - **Platform:** Android Studio
