@@ -20,6 +20,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -186,22 +187,33 @@ class MainActivity : AppCompatActivity(), RecognitionListener {
         speechRecognizer?.destroy()
         speechRecognizer = null
     }
-
     private fun tryToAddToCalendar(text: String) {
-        // VERY basic date/time and description extraction.  This is where you'd put more sophisticated NLP.
         val (date, time, description) = extractDateTimeAndDescription(text)
 
         if (date != null) {
             addEventToCalendar(date, time, description)
+        } else {
+            Toast.makeText(this, "Could not find a valid date in the input.", Toast.LENGTH_SHORT).show()
         }
     }
 
-
     private fun extractDateTimeAndDescription(text: String): Triple<Date?, String?, String> {
-        // Extremely basic date/time extraction using regular expressions.
-        // This is a placeholder and needs significant improvement for real-world use.
+        val monthDayFormat = SimpleDateFormat("dd MMMM", Locale.US) // e.g., "25 March"
+        val monthDayYearFormat = SimpleDateFormat("dd MMMM yyyy", Locale.US) // e.g., "25 March 2024"
+        val dayMonthFormat = SimpleDateFormat("MMMM dd", Locale.US) // e.g., "March 25"
+        val dayMonthYearFormat = SimpleDateFormat("MMMM dd yyyy", Locale.US) // e.g., "March 25 2024"
 
-        val dateTimePattern = Pattern.compile("(\\d{1,2}/\\d{1,2}/\\d{4}|today|tomorrow)\\s?(\\d{1,2}:\\d{2})?", Pattern.CASE_INSENSITIVE)
+        monthDayFormat.isLenient = false
+        monthDayYearFormat.isLenient = false
+        dayMonthFormat.isLenient = false
+        dayMonthYearFormat.isLenient = false
+
+
+        val dateTimePattern = Pattern.compile(
+            "\\b(?:(today|tomorrow|(?:\\d{1,2}(?:st|nd|rd|th)?\\s+)?(?:January|February|March|April|May|June|July|August|September|October|November|December)(?:\\s+\\d{1,2}(?:st|nd|rd|th)?)?(?:\\s+\\d{4})?|(?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}(?:st|nd|rd|th)?(?:\\s+\\d{4})?))\\b(?:\\s+(at\\s+)?(\\d{1,2}:\\d{2}\\s*(AM|PM)?))?",
+            Pattern.CASE_INSENSITIVE
+        )
+
         val matcher = dateTimePattern.matcher(text)
 
         var date: Date? = null
@@ -209,48 +221,72 @@ class MainActivity : AppCompatActivity(), RecognitionListener {
         var description = text
 
         if (matcher.find()) {
-            val dateString = matcher.group(1)  // Get the date part (e.g., "12/25/2024", "today", "tomorrow")
-            time = matcher.group(2)       // Get the time part (e.g., "10:30")
+            var dateString = matcher.group(1) ?: ""
+            val timeString = matcher.group(3)
 
-            val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.US)
-
-            date = try {
-                when (dateString.lowercase()) {
-                    "today" -> Calendar.getInstance().time
-                    "tomorrow" -> {
-                        Calendar.getInstance().apply {
-                            add(Calendar.DATE, 1)
-                        }.time
-                    }
-                    else -> dateFormat.parse(dateString)
+            // Handle "today" and "tomorrow"
+            if (dateString.equals("today", ignoreCase = true)) {
+                date = Calendar.getInstance().time
+            } else if (dateString.equals("tomorrow", ignoreCase = true)) {
+                val cal = Calendar.getInstance()
+                cal.add(Calendar.DATE, 1)
+                date = cal.time
+            } else {
+                // Try parsing with different formats
+                date = tryParseDate(dateString, monthDayYearFormat, monthDayFormat, dayMonthYearFormat, dayMonthFormat)
+                //If date is not null, and no year was found, add the current year.
+                if (date != null && !dateString.contains(Regex("\\d{4}"))) {
+                    val cal = Calendar.getInstance()
+                    cal.time = date
+                    cal.set(Calendar.YEAR, Calendar.getInstance().get(Calendar.YEAR))
+                    date = cal.time
                 }
-
-            } catch (e: Exception) {
-                null // Invalid date format
             }
 
-            description = text.replace(matcher.group(0), "").trim() // Remove the date/time part from the description
+            time = timeString?.trim()
+            description = text.replace(matcher.group(0)!!, "").trim()
         }
-        return Triple(date, time, description)
+
+        val timeWithoutAt = time?.replace(Regex("at\\s+", RegexOption.IGNORE_CASE), "")
+
+        return Triple(date, timeWithoutAt, description)
     }
 
 
+    private fun tryParseDate(dateString: String, vararg formats: SimpleDateFormat): Date? {
+        for (format in formats) {
+            try {
+                return format.parse(dateString)
+            } catch (e: ParseException) {
+                // Continue to the next format
+            }
+        }
+        return null
+    }
 
     private fun addEventToCalendar(date: Date, time: String?, description: String) {
         val cal = Calendar.getInstance()
         cal.time = date
 
         if (time != null) {
-            val timeParts = time.split(":")
-            if (timeParts.size == 2) {
-                val hour = timeParts[0].toIntOrNull()
-                val minute = timeParts[1].toIntOrNull()
-                if (hour != null && minute != null) {
-                    cal.set(Calendar.HOUR_OF_DAY, hour)
-                    cal.set(Calendar.MINUTE, minute)
+            // Parse time, handling AM/PM
+            val timeFormat = SimpleDateFormat("h:mm a", Locale.US)
+            try {
+                val parsedTime = timeFormat.parse(time)
+                if (parsedTime != null) {
+                    val timeCal = Calendar.getInstance()
+                    timeCal.time = parsedTime
+                    cal.set(Calendar.HOUR_OF_DAY, timeCal.get(Calendar.HOUR_OF_DAY))
+                    cal.set(Calendar.MINUTE, timeCal.get(Calendar.MINUTE))
                 }
+
+            } catch (e: ParseException){
+                //  Log.e("Calendar", "Invalid time format: $time", e) //For debugging
+                //Don't set time, use the date only.
+                Toast.makeText(this, "Invalid time format.  Using date only.", Toast.LENGTH_SHORT).show()
             }
         }
+
 
         val startMillis = cal.timeInMillis
         val endMillis = startMillis + (60 * 60 * 1000) // Add one hour
@@ -258,21 +294,21 @@ class MainActivity : AppCompatActivity(), RecognitionListener {
         val values = ContentValues().apply {
             put(CalendarContract.Events.DTSTART, startMillis)
             put(CalendarContract.Events.DTEND, endMillis)
-            put(CalendarContract.Events.TITLE, description) // Use the extracted description
+            put(CalendarContract.Events.TITLE, description)
             put(CalendarContract.Events.CALENDAR_ID, 1) // Default calendar (usually the primary)
             put(CalendarContract.Events.EVENT_TIMEZONE, java.util.Calendar.getInstance().timeZone.id)
         }
 
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED) {
             val uri: Uri? = contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
-            if(uri != null) {
+            if (uri != null) {
                 Toast.makeText(this, "Event added", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "Failed to add event", Toast.LENGTH_SHORT).show()
             }
-
         } else {
-            // Handle the case where permission is not granted (shouldn't happen here, but good practice)
+            // Handle permission not granted (shouldn't happen, but good practice)
             Toast.makeText(this, "Calendar permission not granted", Toast.LENGTH_SHORT).show()
         }
     }
